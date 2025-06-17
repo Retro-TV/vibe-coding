@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Simple Web Rhythm Game</title>
+<style>
+    body { background:#111; color:#fff; font-family:Arial, sans-serif; text-align:center; }
+    #gameCanvas { background:#222; display:block; margin:20px auto; border:2px solid #555; }
+    #controls { margin-top:20px; }
+    .lane { position:absolute; bottom:0; width:80px; height:100%; border-left:1px solid #444; }
+    #scoreboard { margin-top:20px; }
+</style>
+</head>
+<body>
+<h1>Web Rhythm Game</h1>
+<input type="file" id="audioFile" accept="audio/*">
+<div id="controls">
+    <button id="startBtn">Start</button>
+</div>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<div id="scoreboard"></div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const startBtn = document.getElementById('startBtn');
+const audioFileInput = document.getElementById('audioFile');
+const scoreboard = document.getElementById('scoreboard');
+let audioBuffer, audioCtx, sourceNode;
+let notes = [];
+let startTime = 0;
+let gameOver = false;
+let hitWindow = 0.2; // 200ms
+let score = 0;
+let totalNotes = 0;
+let hits = 0;
+
+function resetGame() {
+    notes = [];
+    score = 0;
+    hits = 0;
+    totalNotes = 0;
+    gameOver = false;
+    scoreboard.textContent = '';
+}
+
+function generateNotes(buffer) {
+    const data = buffer.getChannelData(0);
+    const sampleRate = buffer.sampleRate;
+    const segment = Math.floor(sampleRate * 0.3); // ~300ms segments
+    let lastPeak = -Infinity;
+    for (let i = 0; i < data.length; i += segment) {
+        let sum = 0;
+        for (let j = i; j < i + segment && j < data.length; j++) {
+            sum += Math.abs(data[j]);
+        }
+        const amplitude = sum / segment;
+        if (amplitude > 0.3 && i / sampleRate - lastPeak > 0.3) { // simple threshold
+            const time = i / sampleRate;
+            const lane = Math.floor(Math.random() * 4); // 4 lanes
+            const hold = Math.random() < 0.3 ? 0.6 : 0; // some hold notes
+            notes.push({time, lane, hold, hit:false});
+            lastPeak = i / sampleRate;
+        }
+    }
+    totalNotes = notes.length;
+}
+
+function draw(timestamp) {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const currentTime = audioCtx.currentTime - startTime;
+    const laneWidth = canvas.width / 4;
+    for (const note of notes) {
+        const y = 600 - (note.time - currentTime) * 300; // speed
+        if (!note.hit && y > 580 + (note.hold? note.hold*300:0)) {
+            // miss
+            note.hit = true;
+        }
+        if (y < -20) continue; // not yet visible
+        if (!note.hit) {
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(note.lane*laneWidth + 10, y, laneWidth-20, 20);
+            if (note.hold) {
+                ctx.fillStyle = '#080';
+                ctx.fillRect(note.lane*laneWidth + 20, y+20, laneWidth-40, note.hold*300);
+            }
+        }
+    }
+    // hit line
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,580,canvas.width,2);
+    if (!gameOver) requestAnimationFrame(draw);
+}
+
+function handleKey(e) {
+    const laneMap = { 'ArrowLeft':0, 'ArrowDown':1, 'ArrowUp':2, 'ArrowRight':3 };
+    if (!(e.code in laneMap)) return;
+    const lane = laneMap[e.code];
+    const currentTime = audioCtx.currentTime - startTime;
+    for (const note of notes) {
+        if (note.lane === lane && !note.hit) {
+            const diff = Math.abs(note.time - currentTime);
+            if (diff <= hitWindow) {
+                note.hit = true;
+                hits++;
+                score += Math.max(0, Math.floor(300 - (diff / hitWindow) * 300));
+                return;
+            }
+        }
+    }
+}
+
+audioFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const arrayBuffer = await file.arrayBuffer();
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    generateNotes(audioBuffer);
+});
+
+startBtn.addEventListener('click', () => {
+    if (!audioBuffer) {
+        alert('Select an audio file first');
+        return;
+    }
+    resetGame();
+    sourceNode = audioCtx.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.connect(audioCtx.destination);
+    startTime = audioCtx.currentTime + 0.1;
+    sourceNode.start(startTime);
+    sourceNode.onended = endGame;
+    document.addEventListener('keydown', handleKey);
+    requestAnimationFrame(draw);
+});
+
+function endGame() {
+    gameOver = true;
+    document.removeEventListener('keydown', handleKey);
+    const accuracy = hits / totalNotes;
+    let rank = 'D';
+    if (accuracy >= 0.95) rank = 'S';
+    else if (accuracy >= 0.85) rank = 'A';
+    else if (accuracy >= 0.7) rank = 'B';
+    else if (accuracy >= 0.5) rank = 'C';
+    scoreboard.textContent = `Score: ${score} | Hit ${hits}/${totalNotes} | Rank: ${rank}`;
+}
+</script>
+</body>
+</html>
