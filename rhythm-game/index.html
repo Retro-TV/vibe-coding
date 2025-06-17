@@ -115,7 +115,6 @@ audioFileInput.addEventListener('change', async (e) => {
     const arrayBuffer = await file.arrayBuffer();
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    generateNotes(audioBuffer);
 });
 
 startBtn.addEventListener('click', () => {
@@ -124,6 +123,7 @@ startBtn.addEventListener('click', () => {
         return;
     }
     resetGame();
+    generateNotes(audioBuffer);
     sourceNode = audioCtx.createBufferSource();
     sourceNode.buffer = audioBuffer;
     sourceNode.connect(audioCtx.destination);
