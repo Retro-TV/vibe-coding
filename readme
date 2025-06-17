@@ -1,1 +1,23 @@
-testing
+# Vibe Coding
+
+This repository now includes small terminal-based equalizers with simple animations.
+
+## Running (Python version)
+
+To start the equalizer, run:
+
+```bash
+python3 eq.py
+```
+
+Press `q` to exit the animation.
+
+## Running (Bash version)
+
+Alternatively, you can run a Bash implementation:
+
+```bash
+bash eq.sh
+```
+
+Press `q` to exit as well.
