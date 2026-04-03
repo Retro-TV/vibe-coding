@@ -43,7 +43,7 @@
     { name: 'White', color: '#f2f1eb', radius: 75, score: 820 },
     { name: 'Super', color: '#ff00bb', radius: 90, score: 1600 },
     { name: 'Mega', color: '#00c2ff', radius: 50, score: 3200 },
-    { name: 'Nova', color: '#7dff6a', radius: 40, score: 6400 }
+    { name: 'Nova', color: '#151223', radius: 40, score: 6400 }
   ];
 
   const state = {
@@ -63,7 +63,8 @@
     toastTimer: 0,
     lastTime: performance.now(),
     wallBodies: [],
-    pairMergeTimers: new Map()
+    pairMergeTimers: new Map(),
+    pointerDown: false
   };
 
   bestValue.textContent = String(state.best);
@@ -76,6 +77,9 @@
     const g = clamp(((num >> 8) & 0xff) + amt, 0, 255);
     const b = clamp((num & 0xff) + amt, 0, 255);
     return `rgb(${r}, ${g}, ${b})`;
+  }
+  function hslColor(h, s = 85, l = 58) {
+    return `hsl(${((h % 360) + 360) % 360} ${s}% ${l}%)`;
   }
   function pairKey(a, b) { return a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`; }
   function pickNextLevel() {
@@ -152,9 +156,9 @@
       collisionFilter: { group },
       friction: 0.075,
       frictionStatic: 0.16,
-      frictionAir: 0.034,
+      frictionAir: 0.031,
       restitution: 0.02,
-      density: 0.0015,
+      density: 0.00138,
       slop: 0.01,
       sleepThreshold: 30,
       render: { visible: false }
@@ -172,9 +176,9 @@
           collisionFilter: { group },
           friction: 0.07,
           frictionStatic: 0.15,
-          frictionAir: 0.035,
+          frictionAir: 0.032,
           restitution: 0.02,
-          density: 0.00115,
+          density: 0.00105,
           slop: 0.01,
           sleepThreshold: 30,
           render: { visible: false }
@@ -187,8 +191,8 @@
         bodyA: center,
         bodyB: node,
         length: ringRadius,
-        stiffness: 0.036,
-        damping: 0.04,
+        stiffness: 0.029,
+        damping: 0.051,
         render: { visible: false }
       }));
     }
@@ -201,8 +205,8 @@
         bodyA: current,
         bodyB: next,
         length: neighborDist,
-        stiffness: 0.042,
-        damping: 0.045,
+        stiffness: 0.034,
+        damping: 0.054,
         render: { visible: false }
       }));
 
@@ -213,8 +217,8 @@
           bodyA: current,
           bodyB: far,
           length: Vector.magnitude(Vector.sub(current.position, far.position)),
-          stiffness: 0.014,
-          damping: 0.022,
+          stiffness: 0.011,
+          damping: 0.03,
           render: { visible: false }
         }));
       }
@@ -747,17 +751,41 @@
     ctx.stroke();
   }
 
-  function drawBlobBody(center, radius, color, points) {
-    const segments = catmullRomClosed(points, 1);
-    if (!segments.length) return;
+  function getBlobGradient(blob, center, radius, context = ctx) {
+    const now = performance.now() * 0.001;
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(segments[0].p1.x, segments[0].p1.y);
-    segments.forEach((s) => ctx.bezierCurveTo(s.cp1.x, s.cp1.y, s.cp2.x, s.cp2.y, s.p2.x, s.p2.y));
-    ctx.closePath();
+    // 9th ball: animated rainbow.
+    if (blob.level === 8) {
+      const angle = now * 2;
+      const x1 = center.x + Math.cos(angle) * radius;
+      const y1 = center.y + Math.sin(angle) * radius;
+      const x2 = center.x - Math.cos(angle) * radius;
+      const y2 = center.y - Math.sin(angle) * radius;
+      const rainbow = context.createLinearGradient(x1, y1, x2, y2);
+      for (let i = 0; i <= 1; i += 0.16) {
+        rainbow.addColorStop(i, hslColor((now * 220 + i * 360) % 360, 88, 60));
+      }
+      return rainbow;
+    }
 
-    const grad = ctx.createRadialGradient(
+    // 10th ball: black-hole/space style.
+    if (blob.level === 9) {
+      const core = context.createRadialGradient(
+        center.x - radius * 0.18,
+        center.y - radius * 0.12,
+        radius * 0.05,
+        center.x,
+        center.y,
+        radius * 1.15
+      );
+      core.addColorStop(0, '#5b4ed8');
+      core.addColorStop(0.18, '#18102f');
+      core.addColorStop(0.55, '#05050a');
+      core.addColorStop(1, '#000000');
+      return core;
+    }
+
+    const grad = context.createRadialGradient(
       center.x - radius * 0.34,
       center.y - radius * 0.38,
       radius * 0.12,
@@ -765,24 +793,48 @@
       center.y,
       radius * 1.1
     );
-    grad.addColorStop(0, colorShade(color, 58));
-    grad.addColorStop(1, colorShade(color, -18));
-    ctx.fillStyle = grad;
-    ctx.fill();
+    grad.addColorStop(0, colorShade(blob.color, 58));
+    grad.addColorStop(1, colorShade(blob.color, -18));
+    return grad;
+  }
 
-    ctx.lineWidth = Math.max(4, radius * 0.078);
-    ctx.strokeStyle = '#243353';
-    ctx.stroke();
+  function drawBlobBody(blob, center, radius, points, context = ctx, drawFaceFeatures = true) {
+    const segments = catmullRomClosed(points, 1);
+    if (!segments.length) return;
 
-    ctx.globalAlpha = 0.24;
-    ctx.beginPath();
-    ctx.ellipse(center.x - radius * 0.22, center.y - radius * 0.34, radius * 0.22, radius * 0.12, -0.55, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    context.save();
+    context.beginPath();
+    context.moveTo(segments[0].p1.x, segments[0].p1.y);
+    segments.forEach((s) => context.bezierCurveTo(s.cp1.x, s.cp1.y, s.cp2.x, s.cp2.y, s.p2.x, s.p2.y));
+    context.closePath();
 
-    drawFace(center, radius);
-    ctx.restore();
+    context.fillStyle = getBlobGradient(blob, center, radius, context);
+    context.fill();
+
+    context.lineWidth = Math.max(4, radius * 0.078);
+    context.strokeStyle = blob.level === 9 ? '#5f52ff' : '#243353';
+    context.stroke();
+
+    if (blob.level === 9) {
+      const orbit = performance.now() * 0.003;
+      context.globalAlpha = 0.8;
+      context.strokeStyle = '#ff8e3b';
+      context.lineWidth = Math.max(1.4, radius * 0.07);
+      context.beginPath();
+      context.ellipse(center.x, center.y, radius * 0.92, radius * 0.42, orbit, 0.18, Math.PI * 1.82);
+      context.stroke();
+      context.globalAlpha = 1;
+    } else {
+      context.globalAlpha = 0.24;
+      context.beginPath();
+      context.ellipse(center.x - radius * 0.22, center.y - radius * 0.34, radius * 0.22, radius * 0.12, -0.55, 0, Math.PI * 2);
+      context.fillStyle = 'white';
+      context.fill();
+      context.globalAlpha = 1;
+    }
+
+    if (drawFaceFeatures) drawFace(center, radius);
+    context.restore();
   }
 
   function drawBlob(blob) {
@@ -797,7 +849,7 @@
         y: prev.y * 0.18 + p.y * 0.64 + next.y * 0.18
       };
     });
-    drawBlobBody(center, blob.radius, blob.color, points);
+    drawBlobBody(blob, center, blob.radius, points, ctx, blob.level !== 9);
   }
 
   function drawEffects() {
@@ -850,6 +902,7 @@
   function drawCurrentDropper() {
     if (!state.started || state.over) return;
     const type = TYPES[state.currentLevel];
+    const previewBlob = { level: state.currentLevel, color: type.color };
     const x = clamp(state.dropX, CUP.leftTopX + type.radius + 2, CUP.rightTopX - type.radius - 2);
     const y = DROP_Y;
 
@@ -869,7 +922,7 @@
       const angle = (Math.PI * 2 * i) / previewCount;
       pts.push({ x: x + Math.cos(angle) * type.radius, y: y + Math.sin(angle) * type.radius });
     }
-    drawBlobBody({ x, y }, type.radius, type.color, pts);
+    drawBlobBody(previewBlob, { x, y }, type.radius, pts, ctx, state.currentLevel !== 9);
 
     if (!state.canDrop) {
       ctx.globalAlpha = 0.12;
@@ -885,6 +938,7 @@
   function drawNext() {
     nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
     const type = TYPES[state.nextLevel];
+    const previewBlob = { level: state.nextLevel, color: type.color };
     const x = nextCanvas.width / 2;
     const y = nextCanvas.height / 2;
     const r = Math.min(type.radius * 0.48, 22);
@@ -899,22 +953,22 @@
     nextCtx.moveTo(segments[0].p1.x, segments[0].p1.y);
     segments.forEach((s) => nextCtx.bezierCurveTo(s.cp1.x, s.cp1.y, s.cp2.x, s.cp2.y, s.p2.x, s.p2.y));
     nextCtx.closePath();
-    const grad = nextCtx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.12, x, y, r * 1.2);
-    grad.addColorStop(0, colorShade(type.color, 58));
-    grad.addColorStop(1, colorShade(type.color, -18));
-    nextCtx.fillStyle = grad;
+    nextCtx.fillStyle = getBlobGradient(previewBlob, { x, y }, r, nextCtx);
     nextCtx.fill();
     nextCtx.lineWidth = 3.5;
-    nextCtx.strokeStyle = '#243353';
+    nextCtx.strokeStyle = state.nextLevel === 9 ? '#5f52ff' : '#243353';
     nextCtx.stroke();
   }
 
   function fillLegend() {
     legendList.innerHTML = '';
-    TYPES.forEach((type) => {
+    TYPES.forEach((type, index) => {
       const item = document.createElement('div');
       item.className = 'legend-entry';
-      item.innerHTML = `<div class="legend-dot" style="background:${type.color}"></div><span>${type.name}</span>`;
+      let swatchStyle = `background:${type.color}`;
+      if (index === 8) swatchStyle = 'background:linear-gradient(120deg,#ff4dd2,#ff8c1a,#f7f74c,#5dff8a,#34c8ff,#9966ff)';
+      if (index === 9) swatchStyle = 'background:radial-gradient(circle at 35% 30%,#5140ff,#151223 42%,#000 70%)';
+      item.innerHTML = `<div class="legend-dot" style="${swatchStyle}"></div><span>${type.name}</span>`;
       legendList.appendChild(item);
     });
   }
@@ -950,12 +1004,27 @@
 
   canvas.addEventListener('pointermove', (event) => setPointer(event.clientX));
   canvas.addEventListener('pointerdown', (event) => {
+    state.pointerDown = true;
     setPointer(event.clientX);
     if (!state.started) {
       startGame();
-      return;
     }
-    dropBlob();
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener('pointerup', (event) => {
+    if (!state.pointerDown) return;
+    state.pointerDown = false;
+    setPointer(event.clientX);
+    if (state.started) dropBlob();
+    if (canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
+  });
+  canvas.addEventListener('pointercancel', (event) => {
+    state.pointerDown = false;
+    if (canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
   });
 
   window.addEventListener('keydown', (event) => {

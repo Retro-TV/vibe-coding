@@ -23,6 +23,7 @@ body {
     radial-gradient(circle at 12% 14%, rgba(255,255,255,0.78), transparent 22%),
     radial-gradient(circle at 84% 18%, rgba(255,255,255,0.55), transparent 15%),
     linear-gradient(140deg, var(--bg-1), var(--bg-2) 44%, var(--bg-3));
+  overscroll-behavior: none;
 }
 
 .app-shell {
@@ -42,6 +43,15 @@ body {
   border: 1px solid rgba(255,255,255,0.58);
   box-shadow: var(--shadow);
   border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(255,255,255,0.36), rgba(255,255,255,0.04) 55%);
 }
 .card.strong { background: var(--card-strong); }
 
@@ -126,10 +136,15 @@ body {
   background: rgba(255,255,255,0.82);
   box-shadow: 0 8px 20px rgba(27, 39, 78, 0.12);
   cursor: pointer;
-  transition: transform .12s ease, box-shadow .12s ease;
+  transition: transform .12s ease, box-shadow .12s ease, filter .16s ease;
+  touch-action: manipulation;
 }
 .action-btn:hover { transform: translateY(-1px); }
 .action-btn:active { transform: translateY(1px) scale(0.985); }
+.action-btn:focus-visible {
+  outline: 3px solid rgba(42,88,255,0.34);
+  outline-offset: 2px;
+}
 .action-btn.primary {
   color: white;
   background: linear-gradient(180deg, #ff7cb3, #ff5a85);
@@ -146,6 +161,7 @@ body {
   position: relative;
   width: min(100%, 560px);
   padding: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
 }
 #gameCanvas {
   width: 100%;
@@ -159,6 +175,7 @@ body {
     linear-gradient(90deg, transparent 39px, rgba(12, 31, 75, 0.045) 40px);
   background-size: auto, 40px 40px, 40px 40px;
   touch-action: none;
+  box-shadow: inset 0 12px 30px rgba(255,255,255,0.32);
 }
 .toast {
   position: absolute;
@@ -227,6 +244,7 @@ body {
   border-radius: 50%;
   border: 3px solid var(--outline);
   box-shadow: inset 0 -4px 0 rgba(0,0,0,0.08);
+  animation: bob 2.8s ease-in-out infinite;
 }
 .legend-entry {
   display: flex;
@@ -269,10 +287,35 @@ kbd {
 }
 
 @media (max-width: 560px) {
-  .app-shell { padding: 10px; gap: 10px; }
-  .hud-bar { padding: 12px; }
+  .app-shell {
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+  .hud-bar {
+    padding: 10px;
+    gap: 10px;
+  }
   .brand-block h1 { font-size: 1.85rem; }
   .score-chip { min-width: 88px; padding: 9px 12px; }
+  .score-chip strong { font-size: 1.18rem; }
+  .action-btn {
+    min-height: 44px;
+    padding: 11px 14px;
+  }
+  .next-pill {
+    padding: 7px 10px;
+  }
+  .board-shell {
+    padding: 10px;
+  }
+  .overlay {
+    inset: 10px;
+  }
   .legend-entry span { display: none; }
   .blob-strip { gap: 8px; }
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
 }
