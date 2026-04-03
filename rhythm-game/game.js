@@ -34,14 +34,14 @@
   };
 
   const TYPES = [
-    { name: 'Blue', color: '#0c62f5', radius: 25, score: 10 },
-    { name: 'Green', color: '#6ae84a', radius: 30, score: 22 },
-    { name: 'Purple', color: '#a77bf1', radius: 35, score: 48 },
-    { name: 'Red', color: '#f67b7b', radius: 40, score: 100 },
-    { name: 'Orange', color: '#f78623', radius: 55, score: 210 },
-    { name: 'Yellow', color: '#edd02d', radius: 65, score: 420 },
-    { name: 'White', color: '#f2f1eb', radius: 75, score: 820 },
-    { name: 'Super', color: '#ff00bb', radius: 90, score: 1600 },
+    { name: 'Blue', color: '#3a7cff', radius: 25, score: 10 },
+    { name: 'Green', color: '#42d98b', radius: 30, score: 22 },
+    { name: 'Purple', color: '#a374ff', radius: 35, score: 48 },
+    { name: 'Red', color: '#ff6b7b', radius: 40, score: 100 },
+    { name: 'Orange', color: '#ff9b3d', radius: 55, score: 210 },
+    { name: 'Yellow', color: '#ffd84e', radius: 65, score: 420 },
+    { name: 'White', color: '#f7f7ff', radius: 75, score: 820 },
+    { name: 'Super', color: '#ff5dce', radius: 90, score: 1600 },
     { name: 'Mega', color: '#00c2ff', radius: 50, score: 3200 },
     { name: 'Nova', color: '#151223', radius: 40, score: 6400 }
   ];
@@ -725,36 +725,49 @@
     return segments;
   }
 
-  function drawFace(center, r) {
-    const eyeY = center.y - r * 0.12;
+  function drawCuteFace(center, r, context = ctx) {
+    const t = performance.now() * 0.001;
+    const blink = Math.abs(Math.sin(t * 1.35 + center.x * 0.01)) < 0.085;
+    const eyeY = center.y - r * 0.1 + Math.sin(t * 2.8 + center.x * 0.02) * r * 0.01;
     const eyeDx = r * 0.24;
-    const eyeR = Math.max(2.2, r * 0.075);
-    const pupilR = Math.max(1.3, eyeR * 0.46);
+    const eyeW = Math.max(3.2, r * 0.14);
+    const eyeH = blink ? Math.max(1.4, r * 0.015) : Math.max(5.2, r * 0.17);
 
-    ctx.fillStyle = '#243353';
-    ctx.beginPath();
-    ctx.arc(center.x - eyeDx, eyeY, eyeR, 0, Math.PI * 2);
-    ctx.arc(center.x + eyeDx, eyeY, eyeR, 0, Math.PI * 2);
-    ctx.fill();
+    context.fillStyle = '#1f2f55';
+    context.beginPath();
+    context.ellipse(center.x - eyeDx, eyeY, eyeW, eyeH, 0, 0, Math.PI * 2);
+    context.ellipse(center.x + eyeDx, eyeY, eyeW, eyeH, 0, 0, Math.PI * 2);
+    context.fill();
 
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(center.x - eyeDx - eyeR * 0.24, eyeY - eyeR * 0.22, pupilR, 0, Math.PI * 2);
-    ctx.arc(center.x + eyeDx - eyeR * 0.24, eyeY - eyeR * 0.22, pupilR, 0, Math.PI * 2);
-    ctx.fill();
+    if (!blink) {
+      context.fillStyle = 'rgba(255,255,255,0.95)';
+      context.beginPath();
+      context.arc(center.x - eyeDx - eyeW * 0.18, eyeY - eyeH * 0.28, eyeW * 0.26, 0, Math.PI * 2);
+      context.arc(center.x + eyeDx - eyeW * 0.18, eyeY - eyeH * 0.28, eyeW * 0.26, 0, Math.PI * 2);
+      context.fill();
+    }
 
-    ctx.strokeStyle = '#243353';
-    ctx.lineWidth = Math.max(2.2, r * 0.055);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(center.x, center.y + r * 0.12, r * 0.24, 0.12 * Math.PI, 0.88 * Math.PI);
-    ctx.stroke();
+    // blush
+    context.globalAlpha = 0.28;
+    context.fillStyle = '#ff7fa9';
+    context.beginPath();
+    context.ellipse(center.x - eyeDx * 1.1, center.y + r * 0.08, eyeW * 0.95, eyeH * 0.55, 0.1, 0, Math.PI * 2);
+    context.ellipse(center.x + eyeDx * 1.1, center.y + r * 0.08, eyeW * 0.95, eyeH * 0.55, -0.1, 0, Math.PI * 2);
+    context.fill();
+    context.globalAlpha = 1;
+
+    context.strokeStyle = '#1f2f55';
+    context.lineWidth = Math.max(2.3, r * 0.058);
+    context.lineCap = 'round';
+    context.beginPath();
+    context.arc(center.x, center.y + r * 0.16, r * 0.22, 0.08 * Math.PI, 0.92 * Math.PI);
+    context.stroke();
   }
 
   function getBlobGradient(blob, center, radius, context = ctx) {
     const now = performance.now() * 0.001;
 
-    // 9th ball: animated rainbow.
+    // 9th ball: animated rainbow + cosmic tint.
     if (blob.level === 8) {
       const angle = now * 2;
       const x1 = center.x + Math.cos(angle) * radius;
@@ -763,7 +776,7 @@
       const y2 = center.y - Math.sin(angle) * radius;
       const rainbow = context.createLinearGradient(x1, y1, x2, y2);
       for (let i = 0; i <= 1; i += 0.16) {
-        rainbow.addColorStop(i, hslColor((now * 220 + i * 360) % 360, 88, 60));
+        rainbow.addColorStop(i, hslColor((now * 180 + i * 360) % 360, 90, 62));
       }
       return rainbow;
     }
@@ -771,16 +784,17 @@
     // 10th ball: black-hole/space style.
     if (blob.level === 9) {
       const core = context.createRadialGradient(
-        center.x - radius * 0.18,
-        center.y - radius * 0.12,
-        radius * 0.05,
+        center.x - radius * 0.22,
+        center.y - radius * 0.18,
+        radius * 0.03,
         center.x,
         center.y,
-        radius * 1.15
+        radius * 1.2
       );
-      core.addColorStop(0, '#5b4ed8');
-      core.addColorStop(0.18, '#18102f');
-      core.addColorStop(0.55, '#05050a');
+      core.addColorStop(0, '#9f98ff');
+      core.addColorStop(0.09, '#2c205f');
+      core.addColorStop(0.3, '#0e0d18');
+      core.addColorStop(0.62, '#040408');
       core.addColorStop(1, '#000000');
       return core;
     }
@@ -816,13 +830,42 @@
     context.stroke();
 
     if (blob.level === 9) {
-      const orbit = performance.now() * 0.003;
-      context.globalAlpha = 0.8;
-      context.strokeStyle = '#ff8e3b';
-      context.lineWidth = Math.max(1.4, radius * 0.07);
+      const orbit = performance.now() * 0.0027;
+      const ringGrad = context.createLinearGradient(center.x - radius, center.y, center.x + radius, center.y);
+      ringGrad.addColorStop(0, '#ff9347');
+      ringGrad.addColorStop(0.45, '#ffd773');
+      ringGrad.addColorStop(1, '#a86cff');
+      context.globalAlpha = 0.88;
+      context.strokeStyle = ringGrad;
+      context.lineWidth = Math.max(1.5, radius * 0.08);
       context.beginPath();
-      context.ellipse(center.x, center.y, radius * 0.92, radius * 0.42, orbit, 0.18, Math.PI * 1.82);
+      context.ellipse(center.x, center.y, radius * 0.96, radius * 0.44, orbit, 0.14, Math.PI * 1.84);
       context.stroke();
+
+      context.globalAlpha = 0.42;
+      context.strokeStyle = '#7fd3ff';
+      context.lineWidth = Math.max(1, radius * 0.03);
+      context.beginPath();
+      context.ellipse(center.x, center.y, radius * 1.08, radius * 0.27, -orbit * 0.6, 0.2, Math.PI * 1.8);
+      context.stroke();
+      context.globalAlpha = 1;
+    } else if (blob.level === 8) {
+      const aura = context.createRadialGradient(center.x, center.y, radius * 0.1, center.x, center.y, radius * 1.22);
+      aura.addColorStop(0, 'rgba(255,255,255,0)');
+      aura.addColorStop(1, 'rgba(176,224,255,0.32)');
+      context.fillStyle = aura;
+      context.fill();
+
+      context.globalAlpha = 0.85;
+      for (let i = 0; i < 6; i += 1) {
+        const twinkle = performance.now() * 0.002 + i * 1.18;
+        const sx = center.x + Math.cos(twinkle) * radius * 0.58;
+        const sy = center.y + Math.sin(twinkle * 1.17) * radius * 0.5;
+        context.fillStyle = 'rgba(255,255,255,0.95)';
+        context.beginPath();
+        context.arc(sx, sy, Math.max(1.1, radius * 0.04), 0, Math.PI * 2);
+        context.fill();
+      }
       context.globalAlpha = 1;
     } else {
       context.globalAlpha = 0.24;
@@ -833,7 +876,7 @@
       context.globalAlpha = 1;
     }
 
-    if (drawFaceFeatures) drawFace(center, radius);
+    if (drawFaceFeatures) drawCuteFace(center, radius, context);
     context.restore();
   }
 
@@ -869,7 +912,20 @@
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
-    ctx.strokeStyle = 'rgba(36, 51, 83, 0.22)';
+    // Cup interior tint
+    const cupFill = ctx.createLinearGradient(0, CUP.wallTopY, 0, CUP.floorY + 20);
+    cupFill.addColorStop(0, 'rgba(189,224,255,0.18)');
+    cupFill.addColorStop(1, 'rgba(110,170,240,0.08)');
+    ctx.fillStyle = cupFill;
+    ctx.beginPath();
+    ctx.moveTo(CUP.leftTopX + 10, CUP.wallTopY + 10);
+    ctx.lineTo(CUP.floorLeftX + 10, CUP.floorY - 10);
+    ctx.lineTo(CUP.floorRightX - 10, CUP.floorY - 10);
+    ctx.lineTo(CUP.rightTopX - 10, CUP.wallTopY + 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(36, 51, 83, 0.2)';
     ctx.lineWidth = CUP.strokeOuter + 6;
     ctx.beginPath();
     ctx.moveTo(CUP.leftTopX, CUP.wallTopY);
@@ -878,7 +934,11 @@
     ctx.lineTo(CUP.rightTopX, CUP.wallTopY);
     ctx.stroke();
 
-    ctx.strokeStyle = '#20252f';
+    const frame = ctx.createLinearGradient(CUP.leftTopX, CUP.wallTopY, CUP.rightTopX, CUP.floorY);
+    frame.addColorStop(0, '#2d3b64');
+    frame.addColorStop(0.5, '#222f4f');
+    frame.addColorStop(1, '#1a233d');
+    ctx.strokeStyle = frame;
     ctx.lineWidth = CUP.strokeOuter;
     ctx.beginPath();
     ctx.moveTo(CUP.leftTopX, CUP.wallTopY);
@@ -887,13 +947,21 @@
     ctx.lineTo(CUP.rightTopX, CUP.wallTopY);
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.86)';
     ctx.lineWidth = CUP.strokeInner;
     ctx.beginPath();
     ctx.moveTo(CUP.leftTopX + 2, CUP.wallTopY + 5);
     ctx.lineTo(CUP.floorLeftX + 6, CUP.floorY - 4);
     ctx.lineTo(CUP.floorRightX - 6, CUP.floorY - 4);
     ctx.lineTo(CUP.rightTopX - 2, CUP.wallTopY + 5);
+    ctx.stroke();
+
+    // Rim glow for more polished look.
+    ctx.strokeStyle = 'rgba(146, 219, 255, 0.65)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(CUP.leftTopX + 14, CUP.wallTopY + 14);
+    ctx.lineTo(CUP.rightTopX - 14, CUP.wallTopY + 14);
     ctx.stroke();
 
     ctx.restore();
@@ -966,8 +1034,8 @@
       const item = document.createElement('div');
       item.className = 'legend-entry';
       let swatchStyle = `background:${type.color}`;
-      if (index === 8) swatchStyle = 'background:linear-gradient(120deg,#ff4dd2,#ff8c1a,#f7f74c,#5dff8a,#34c8ff,#9966ff)';
-      if (index === 9) swatchStyle = 'background:radial-gradient(circle at 35% 30%,#5140ff,#151223 42%,#000 70%)';
+      if (index === 8) swatchStyle = 'background:conic-gradient(from 35deg,#ff4db8,#ff9047,#ffe76d,#5ff7b9,#58b8ff,#a27bff,#ff4db8)';
+      if (index === 9) swatchStyle = 'background:radial-gradient(circle at 30% 22%,#9788ff,#271a4e 33%,#080911 62%,#000 100%)';
       item.innerHTML = `<div class="legend-dot" style="${swatchStyle}"></div><span>${type.name}</span>`;
       legendList.appendChild(item);
     });

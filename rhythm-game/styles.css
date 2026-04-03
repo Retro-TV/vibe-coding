@@ -1,13 +1,14 @@
 :root {
-  --bg-1: #8bd9ff;
-  --bg-2: #ffe08f;
-  --bg-3: #ff9fc5;
-  --card: rgba(255, 255, 255, 0.55);
-  --card-strong: rgba(255, 255, 255, 0.84);
-  --ink: #1a2747;
-  --muted: #586583;
-  --outline: #243353;
-  --shadow: 0 18px 40px rgba(37, 54, 92, 0.16);
+  --bg-1: #7cc7ff;
+  --bg-2: #7be4da;
+  --bg-3: #b88dff;
+  --bg-4: #ffa6cb;
+  --card: rgba(245, 251, 255, 0.62);
+  --card-strong: rgba(255, 255, 255, 0.88);
+  --ink: #1b2b4e;
+  --muted: #5b6b8d;
+  --outline: #2c3f6c;
+  --shadow: 0 18px 42px rgba(31, 48, 94, 0.2);
   --radius-xl: 28px;
   --radius-lg: 22px;
   --radius-md: 16px;
@@ -20,10 +21,11 @@ body {
   font-family: Inter, system-ui, sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 12% 14%, rgba(255,255,255,0.78), transparent 22%),
-    radial-gradient(circle at 84% 18%, rgba(255,255,255,0.55), transparent 15%),
-    linear-gradient(140deg, var(--bg-1), var(--bg-2) 44%, var(--bg-3));
+    radial-gradient(circle at 12% 14%, rgba(255,255,255,0.8), transparent 24%),
+    radial-gradient(circle at 84% 18%, rgba(255,255,255,0.58), transparent 16%),
+    linear-gradient(130deg, var(--bg-1), var(--bg-2) 36%, var(--bg-3) 72%, var(--bg-4));
   overscroll-behavior: none;
+  animation: skyShift 12s ease-in-out infinite alternate;
 }
 
 .app-shell {
@@ -51,7 +53,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(140deg, rgba(255,255,255,0.36), rgba(255,255,255,0.04) 55%);
+  background: linear-gradient(140deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05) 55%);
 }
 .card.strong { background: var(--card-strong); }
 
@@ -85,8 +87,8 @@ body {
   min-width: 106px;
   padding: 10px 14px;
   border-radius: 18px;
-  background: rgba(255,255,255,0.64);
-  border: 1px solid rgba(28, 43, 78, 0.08);
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(28, 43, 78, 0.1);
 }
 .score-chip span,
 .next-label {
@@ -116,8 +118,8 @@ body {
   gap: 10px;
   padding: 8px 12px;
   border-radius: 18px;
-  background: rgba(255,255,255,0.64);
-  border: 1px solid rgba(28, 43, 78, 0.08);
+  background: rgba(255,255,255,0.74);
+  border: 1px solid rgba(28, 43, 78, 0.1);
 }
 #nextCanvas {
   width: 56px;
@@ -147,7 +149,7 @@ body {
 }
 .action-btn.primary {
   color: white;
-  background: linear-gradient(180deg, #ff7cb3, #ff5a85);
+  background: linear-gradient(180deg, #ff78b5, #ff5786 60%, #ff4f73);
 }
 .action-btn.huge { padding: 14px 22px; font-size: 1.15rem; }
 
@@ -161,7 +163,7 @@ body {
   position: relative;
   width: min(100%, 560px);
   padding: 14px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 8px 26px rgba(38, 58, 101, 0.2);
 }
 #gameCanvas {
   width: 100%;
@@ -252,7 +254,8 @@ body {
   gap: 8px;
   padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.52);
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(31, 49, 88, 0.08);
 }
 .legend-entry span {
   font-family: "Baloo 2", cursive;
@@ -318,4 +321,9 @@ kbd {
 @keyframes bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
+}
+
+@keyframes skyShift {
+  from { filter: saturate(1) hue-rotate(0deg); }
+  to { filter: saturate(1.06) hue-rotate(-8deg); }
 }
