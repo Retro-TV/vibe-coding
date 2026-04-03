@@ -64,7 +64,8 @@
     lastTime: performance.now(),
     wallBodies: [],
     pairMergeTimers: new Map(),
-    pointerDown: false
+    pointerDown: false,
+    unlockedLevels: TYPES.map((_, i) => i < 4)
   };
 
   bestValue.textContent = String(state.best);
@@ -242,6 +243,11 @@
       merging: false,
       settleBias: 0
     };
+
+    if (!state.unlockedLevels[level]) {
+      state.unlockedLevels[level] = true;
+      fillLegend();
+    }
 
     state.blobs.push(blob);
     return blob;
@@ -756,19 +762,25 @@
     context.fill();
     context.globalAlpha = 1;
 
+    const mouthOpen = 0.5 + 0.5 * Math.sin(t * 4 + center.y * 0.02);
+    const mouthY = center.y + r * 0.17;
     context.strokeStyle = '#1f2f55';
     context.lineWidth = Math.max(2.3, r * 0.058);
     context.lineCap = 'round';
     context.beginPath();
-    context.arc(center.x, center.y + r * 0.16, r * 0.22, 0.08 * Math.PI, 0.92 * Math.PI);
+    if (mouthOpen > 0.55) {
+      context.ellipse(center.x, mouthY, r * 0.11, r * 0.07, 0, 0, Math.PI * 2);
+    } else {
+      context.arc(center.x, mouthY, r * 0.2, 0.08 * Math.PI, 0.92 * Math.PI);
+    }
     context.stroke();
   }
 
   function getBlobGradient(blob, center, radius, context = ctx) {
     const now = performance.now() * 0.001;
 
-    // 9th ball: animated rainbow + cosmic tint.
-    if (blob.level === 8) {
+    // 8th ball: animated rainbow.
+    if (blob.level === 7) {
       const angle = now * 2;
       const x1 = center.x + Math.cos(angle) * radius;
       const y1 = center.y + Math.sin(angle) * radius;
@@ -781,7 +793,24 @@
       return rainbow;
     }
 
-    // 10th ball: black-hole/space style.
+    // 9th ball: galaxy style.
+    if (blob.level === 8) {
+      const galaxy = context.createRadialGradient(
+        center.x - radius * 0.25,
+        center.y - radius * 0.15,
+        radius * 0.08,
+        center.x,
+        center.y,
+        radius * 1.18
+      );
+      galaxy.addColorStop(0, '#f1d7ff');
+      galaxy.addColorStop(0.17, '#8b6dff');
+      galaxy.addColorStop(0.5, '#2d1b63');
+      galaxy.addColorStop(1, '#0a0f20');
+      return galaxy;
+    }
+
+    // 10th ball: black-hole style.
     if (blob.level === 9) {
       const core = context.createRadialGradient(
         center.x - radius * 0.22,
@@ -850,6 +879,18 @@
       context.stroke();
       context.globalAlpha = 1;
     } else if (blob.level === 8) {
+      context.globalAlpha = 0.86;
+      for (let i = 0; i < 7; i += 1) {
+        const twinkle = performance.now() * 0.0018 + i * 0.84;
+        const sx = center.x + Math.cos(twinkle) * radius * 0.56;
+        const sy = center.y + Math.sin(twinkle * 1.22) * radius * 0.46;
+        context.fillStyle = i % 2 ? 'rgba(170,225,255,0.95)' : 'rgba(255,255,255,0.95)';
+        context.beginPath();
+        context.arc(sx, sy, Math.max(1.2, radius * 0.038), 0, Math.PI * 2);
+        context.fill();
+      }
+      context.globalAlpha = 1;
+    } else if (blob.level === 7) {
       const aura = context.createRadialGradient(center.x, center.y, radius * 0.1, center.x, center.y, radius * 1.22);
       aura.addColorStop(0, 'rgba(255,255,255,0)');
       aura.addColorStop(1, 'rgba(176,224,255,0.32)');
@@ -1033,10 +1074,14 @@
     TYPES.forEach((type, index) => {
       const item = document.createElement('div');
       item.className = 'legend-entry';
+      const unlocked = !!state.unlockedLevels[index];
       let swatchStyle = `background:${type.color}`;
-      if (index === 8) swatchStyle = 'background:conic-gradient(from 35deg,#ff4db8,#ff9047,#ffe76d,#5ff7b9,#58b8ff,#a27bff,#ff4db8)';
+      if (index === 7) swatchStyle = 'background:conic-gradient(from 35deg,#ff4db8,#ff9047,#ffe76d,#5ff7b9,#58b8ff,#a27bff,#ff4db8)';
+      if (index === 8) swatchStyle = 'background:radial-gradient(circle at 30% 20%,#f3ddff,#7a62ff 28%,#2e1f64 56%,#0a0f20 100%)';
       if (index === 9) swatchStyle = 'background:radial-gradient(circle at 30% 22%,#9788ff,#271a4e 33%,#080911 62%,#000 100%)';
-      item.innerHTML = `<div class="legend-dot" style="${swatchStyle}"></div><span>${type.name}</span>`;
+      item.innerHTML = unlocked
+        ? `<div class="legend-dot" style="${swatchStyle}"></div>`
+        : '<div class="legend-dot locked">?</div>';
       legendList.appendChild(item);
     });
   }

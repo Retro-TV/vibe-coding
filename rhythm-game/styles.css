@@ -237,30 +237,37 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .legend-dot {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 3px solid var(--outline);
   box-shadow: inset 0 -4px 0 rgba(0,0,0,0.08);
   animation: bob 2.8s ease-in-out infinite;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: white;
+  font-family: "Baloo 2", cursive;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.45);
 }
 .legend-entry {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
   border-radius: 999px;
   background: rgba(255,255,255,0.62);
   border: 1px solid rgba(31, 49, 88, 0.08);
 }
-.legend-entry span {
-  font-family: "Baloo 2", cursive;
-  font-size: 0.98rem;
-  line-height: 1;
+.legend-dot.locked {
+  background: radial-gradient(circle at 30% 30%, #444b63, #05070f 70%);
+  border-color: #9aa6c8;
 }
 
 kbd {
@@ -314,7 +321,6 @@ kbd {
   .overlay {
     inset: 10px;
   }
-  .legend-entry span { display: none; }
   .blob-strip { gap: 8px; }
 }
 
